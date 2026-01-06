@@ -7,6 +7,8 @@
 const W = 1080;
 const H = 1920;
 
+window.__ARK_APP_LOADED = true;
+
 const els = {
   photo: document.getElementById('photo'),
   title: document.getElementById('title'),
@@ -20,9 +22,38 @@ const els = {
   render: document.getElementById('render'),
   download: document.getElementById('download'),
   canvas: document.getElementById('canvas'),
+  debug: document.getElementById('debug'),
 };
 
+
+function showDebug(msg){
+  try{
+    clearDebug();
+    showDebug('Loading image…');
+    if (!els.debug) return;
+    els.debug.hidden = false;
+    els.debug.textContent = msg;
+  }catch(_){}
+}
+function clearDebug(){
+  try{
+    if (!els.debug) return;
+    els.debug.hidden = true;
+    els.debug.textContent = '';
+  }catch(_){}
+}
+window.addEventListener('error', (e) => {
+  showDebug('Error: ' + (e.message || e.error || e.type));
+});
+window.addEventListener('unhandledrejection', (e) => {
+  showDebug('Unhandled promise rejection: ' + (e.reason && e.reason.message ? e.reason.message : String(e.reason)));
+});
 const ctx = els.canvas.getContext('2d');
+
+// Status banner
+const banner = document.getElementById('statusBanner');
+if (banner){ banner.textContent = 'App loaded. Upload a photo to begin.'; banner.classList.add('good'); }
+
 
 let img = null;
 let imgLoaded = false;
@@ -38,23 +69,86 @@ function toAllCaps(s){
 }
 
 function setControlsEnabled(enabled){
-  els.render.disabled = !enabled;
-  els.download.disabled = !enabled;
+  // Keep buttons clickable; we'll show a message if user clicks too early.
+  if (banner){
+    banner.textContent = enabled ? 'Ready. Adjust title/status and download.' : 'Upload a photo to begin.';
+  }
+}
+
+
+async function ensureBrowserReadableImageFile(file){
+  // Many phones (especially iPhone) produce HEIC/HEIF images that some browsers can't decode.
+  // If heic2any is available, convert to JPEG in-browser.
+  const name = ((file && file.name) || '').toLowerCase();
+  const type = ((file && file.type) || '').toLowerCase();
+
+  const isHeic = type.includes('heic') || type.includes('heif') || name.endsWith('.heic') || name.endsWith('.heif');
+  if (!isHeic) return file;
+
+  if (typeof heic2any !== 'function'){
+    throw new Error('HEIC image detected but converter not available.');
+  }
+
+  const jpegBlob = await heic2any({
+    blob: file,
+    toType: 'image/jpeg',
+    quality: 0.92
+  });
+
+  const outBlob = Array.isArray(jpegBlob) ? jpegBlob[0] : jpegBlob;
+
+  return new File([outBlob], (file.name || 'photo').replace(/\.(heic|heif)$/i, '.jpg'), { type: 'image/jpeg' });
 }
 
 function loadImageFromFile(file){
-  return new Promise((resolve, reject) => {
-    const url = URL.createObjectURL(file);
-    const i = new Image();
-    i.onload = () => {
-      URL.revokeObjectURL(url);
-      resolve(i);
-    };
-    i.onerror = (e) => {
-      URL.revokeObjectURL(url);
-      reject(e);
-    };
-    i.src = url;
+  // Robust decode: try createImageBitmap, then fall back to objectURL Image(), then FileReader dataURL.
+  return new Promise(async (resolve, reject) => {
+    try{
+      if (window.createImageBitmap){
+        const bmp = await createImageBitmap(file);
+        // Convert ImageBitmap into an HTMLImageElement for naturalWidth/Height compatibility
+        const off = document.createElement('canvas');
+        off.width = bmp.width;
+        off.height = bmp.height;
+        off.getContext('2d').drawImage(bmp, 0, 0);
+        const dataUrl = off.toDataURL('image/png');
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = (e) => reject(e);
+        i.src = dataUrl;
+        return;
+      }
+    }catch(err){
+      // continue to fallbacks
+      console.warn('createImageBitmap failed, falling back', err);
+    }
+
+    // Fallback 1: objectURL
+    try{
+      const url = URL.createObjectURL(file);
+      const i = new Image();
+      i.onload = () => { URL.revokeObjectURL(url); resolve(i); };
+      i.onerror = (e) => { URL.revokeObjectURL(url); throw e; };
+      i.src = url;
+      return;
+    }catch(err){
+      console.warn('objectURL load failed, falling back', err);
+    }
+
+    // Fallback 2: FileReader dataURL
+    try{
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => {
+        const i = new Image();
+        i.onload = () => resolve(i);
+        i.onerror = reject;
+        i.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }catch(err){
+      reject(err);
+    }
   });
 }
 
@@ -270,14 +364,18 @@ els.photo.addEventListener('change', async (e) => {
   if (!file) return;
 
   try{
-    img = await loadImageFromFile(file);
+    const readableFile = await ensureBrowserReadableImageFile(file);
+    img = await loadImageFromFile(readableFile);
     imgLoaded = true;
+    showDebug('Image loaded. Rendering…');
     setControlsEnabled(true);
     // Render automatically once after image load
     await render();
+    clearDebug();
   }catch(err){
     console.error(err);
-    alert('Could not load that image. Please try a different file.');
+    showDebug('Could not load image. Details: ' + (err && err.message ? err.message : String(err)) + '\n\nTry: a different JPEG, a PNG screenshot, or re-export the photo.');
+    alert('Could not load that image. Open the debug box for details.');
   }
 });
 
@@ -290,8 +388,14 @@ els.photo.addEventListener('change', async (e) => {
   els.blur.addEventListener(ev, () => render());
 });
 
-els.render.addEventListener('click', render);
-els.download.addEventListener('click', downloadPNG);
+els.render.addEventListener('click', () => {
+  if (!imgLoaded){ alert('Upload a photo first.'); return; }
+  render();
+});
+els.download.addEventListener('click', () => {
+  if (!imgLoaded){ alert('Upload a photo first.'); return; }
+  downloadPNG();
+});
 
 // Initial placeholder (dark canvas)
 ctx.fillStyle = '#111';
