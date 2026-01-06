@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/24460816/README.md)
 # ARK Story Generator — Fly.io Deploy
 
 This repo is a static web app (HTML/CSS/JS) packaged with Nginx for easy deployment on Fly.io.
