@@ -19,6 +19,8 @@
       </div>
     </div>
   </header>
+  <div id="statusBanner" class="statusBanner">Loading app…</div>
+
 
   <main>
     <section class="panel">
@@ -63,8 +65,8 @@
       </div>
 
       <div class="buttons">
-        <button id="render" class="primary" disabled>Render Preview</button>
-        <button id="download" disabled>Download PNG</button>
+        <button id="render" class="primary">Render Preview</button>
+        <button id="download">Download PNG</button>
       </div>
 
       <div class="hint">
@@ -93,6 +95,7 @@
           <li>Optional micro-CTA: top-right, 18px, tracking +10%, color #777777 @ (40px padding)</li>
         </ul>
       </details>
+      <div id="debug" class="debug" hidden></div>
     </section>
   </main>
 
@@ -100,6 +103,20 @@
     <span>Local, no uploads. Runs entirely in your browser.</span>
   </footer>
 
+  <script>window.__ARK_APP_LOADED=false;</script>
+  <script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
   <script src="./app.js"></script>
+
+  <script>
+    function __arkCheckLoaded(){
+      const b=document.getElementById("statusBanner");
+      if(!window.__ARK_APP_LOADED){
+        b.textContent="App failed to load (app.js). Check that /app.js returns JavaScript (not HTML) and isn't blocked.";
+        b.classList.add("bad");
+      }
+    }
+    setTimeout(__arkCheckLoaded, 800);
+  </script>
+
 </body>
 </html>
