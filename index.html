@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ARK Story Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="dot"></div>
+      <div>
+        <h1>ARK Story Generator</h1>
+        <p>Luxury 9:16 template • 1080×1920</p>
+      </div>
+    </div>
+  </header>
+  <div id="statusBanner" class="statusBanner">Loading…</div>
+
+
+  <main>
+    <section class="panel">
+      <div class="field">
+        <label>Photo</label>
+        <input id="photo" type="file" accept="image/*" />
+        <small>Any size. The app will generate a 1080×1920 image with fit + blurred background.</small>
+      </div>
+
+      <div class="field">
+        <label>Title</label>
+        <input id="title" type="text" placeholder="ANTIQUE QUARTER SAWN OAK CABINET" maxlength="120" />
+        <small>Converted to ALL CAPS automatically.</small>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Status line</label>
+          <input id="status" type="text" value="AVAILABLE" maxlength="40" />
+        </div>
+        <div class="field checkbox">
+          <label class="check">
+            <input id="ctaEnabled" type="checkbox" checked />
+            <span>Show micro-CTA</span>
+          </label>
+          <input id="ctaText" type="text" value="DM TO INQUIRE" maxlength="40" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label>Background dim</label>
+          <input id="dim" type="range" min="0" max="40" value="15" />
+          <small><span id="dimValue">15</span>% black overlay on blurred background.</small>
+        </div>
+
+        <div class="field">
+          <label>Background blur</label>
+          <input id="blur" type="range" min="0" max="80" value="40" />
+          <small><span id="blurValue">40</span>px blur.</small>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button id="render" class="primary">Render Preview</button>
+        <button id="download">Download PNG</button>
+      </div>
+
+      <div class="hint">
+        Tip: build a queue by rendering one, downloading, then swapping photo + title.
+      </div>
+    </section>
+
+    <section class="preview">
+      <div class="previewHeader">
+        <h2>Preview</h2>
+        <p>What you see is exactly what exports.</p>
+      </div>
+
+      <div class="canvasWrap">
+        <canvas id="canvas" width="1080" height="1920" aria-label="Story preview"></canvas>
+      </div>
+
+      <div id="debug" class="debug" hidden></div>
+
+      <details class="spec">
+        <summary>Pixel spec (matches your approved luxury layout)</summary>
+        <ul>
+          <li>Canvas: 1080×1920</li>
+          <li>Info panel: 1080×240 @ y=1680, fill #F7F6F3</li>
+          <li>Divider: 120×2 @ (480,1704), fill #c19a6b</li>
+          <li>Title box: 888px wide @ x=96, y=1748, Playfair 600, 44px, LH 52, tracking +4%</li>
+          <li>Status: Playfair 400, 26px, tracking +6%, color #555555 @ y=1816</li>
+          <li>Optional micro-CTA: top-right, 18px, tracking +10%, color #777777 @ (40px padding)</li>
+        </ul>
+      </details>
+    </section>
+  </main>
+
+  <footer>
+    <span>Local, no uploads. Runs entirely in your browser.</span>
+  </footer>
+
+  <script src="https://unpkg.com/heic2any/dist/heic2any.min.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
